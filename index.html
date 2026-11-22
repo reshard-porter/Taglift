@@ -1,0 +1,843 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Taglift — Word formatting to HTML tags</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400;1,6..72,500&family=Schibsted+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#E9EDF2; --sheet:#FFFFFF; --ink:#1C2430; --muted:#5E6B7A; --rule:#D3DAE3;
+  --pencil:#2B50D8; --pencil-ink:#1D3BB0; --pencil-wash:#E6ECFF; --ok:#1E7A55; --err:#B3261E; --err-wash:#FCECEA;
+  --serif:'Newsreader',Georgia,serif; --sans:'Schibsted Grotesk',system-ui,sans-serif; --mono:'IBM Plex Mono',ui-monospace,monospace;
+  --r-sm:6px; --r-md:10px; --r-lg:16px;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--paper);color:var(--ink);font:400 16px/1.55 var(--sans);-webkit-font-smoothing:antialiased}
+button,input{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--pencil);outline-offset:2px;border-radius:4px}
+.wrap{max-width:1160px;margin:0 auto;padding:0 28px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* Masthead */
+.mast{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:22px 0 0}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:19px;letter-spacing:-.01em}
+.brand svg{display:block}
+.privacy{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:14px}
+.privacy svg{flex:none}
+
+/* Hero */
+.hero{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:56px;align-items:end;padding:56px 0 40px}
+h1{font:500 clamp(38px,5.2vw,62px)/1.02 var(--serif);letter-spacing:-.025em;margin:0 0 20px}
+.lede{font-size:18px;color:var(--muted);max-width:34ch;margin:0}
+.specimen{background:var(--sheet);border-radius:var(--r-lg);padding:26px 30px 22px;box-shadow:0 1px 0 rgba(28,36,48,.06),0 18px 40px -24px rgba(28,36,48,.35)}
+.spec-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
+.spec-head p{margin:0;font-size:14px;color:var(--muted)}
+.seg{display:inline-flex;background:var(--paper);border-radius:999px;padding:3px}
+.seg button{white-space:nowrap;border:0;background:none;padding:6px 14px;border-radius:999px;font-size:14px;font-weight:500;color:var(--muted);cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--sheet);color:var(--ink);box-shadow:0 1px 2px rgba(28,36,48,.15)}
+.spec-text{font:400 21px/1.6 var(--serif);margin:0;min-height:5.2em}
+.spec-text .b{font-weight:600}.spec-text .i{font-style:italic}.spec-text .u{text-decoration:underline;text-underline-offset:3px}
+.spec-text .tg{font:500 .72em var(--mono);color:var(--pencil);display:inline-block;max-width:0;opacity:0;overflow:hidden;vertical-align:baseline;white-space:nowrap;transition:max-width .5s cubic-bezier(.2,.7,.2,1),opacity .35s}
+.spec-text.tagged .tg{max-width:4.5em;opacity:1}
+.spec-text.tagged .b{font-weight:400}.spec-text.tagged .i{font-style:normal}.spec-text.tagged .u{text-decoration:none}
+.spec-text .b,.spec-text .i,.spec-text .u{transition:font-weight .3s}
+
+/* Workspace */
+.work{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:28px;align-items:start;padding-bottom:72px}
+.drop{display:block;position:relative;background:var(--sheet);border:2px dashed #B9C3D0;border-radius:var(--r-lg);padding:52px 28px;text-align:center;cursor:pointer;transition:border-color .15s,background .15s}
+.drop:hover{border-color:var(--pencil)}
+.drop.over{border-color:var(--pencil);border-style:solid;background:var(--pencil-wash)}
+.drop input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%}
+.drop .doc-ic{margin:0 auto 18px;display:block}
+.drop h2{font:500 26px/1.2 var(--serif);margin:0 0 6px;letter-spacing:-.01em}
+.drop p{margin:0;color:var(--muted)}
+.drop .browse{color:var(--pencil-ink);font-weight:600;text-decoration:underline;text-underline-offset:3px}
+.drop.compact{padding:22px 24px;display:flex;align-items:center;gap:16px;text-align:left}
+.drop.compact .doc-ic{margin:0;width:34px;height:42px}
+.drop.compact h2{font-size:19px;margin:0}
+.sample{margin:14px 0 0;font-size:14.5px;color:var(--muted);text-align:center}
+.linkbtn{background:none;border:0;padding:0;color:var(--pencil-ink);font-weight:600;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+
+/* Results */
+.results{display:flex;flex-direction:column;gap:16px;margin-top:20px}
+.file{background:var(--sheet);border-radius:var(--r-lg);box-shadow:0 1px 0 rgba(28,36,48,.06),0 10px 30px -22px rgba(28,36,48,.4);overflow:hidden}
+.file-top{display:flex;align-items:center;gap:16px;padding:20px 22px}
+.file-ic{flex:none;width:40px;height:48px;border-radius:5px;background:var(--paper);display:grid;place-items:center;font:600 10px var(--mono);color:var(--muted);position:relative}
+.file-ic.done{background:var(--pencil-wash);color:var(--pencil-ink)}
+.file-ic.bad{background:var(--err-wash);color:var(--err)}
+.file-meta{min-width:0;flex:1}
+.file-name{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.file-sub{font-size:14px;color:var(--muted)}
+.file-sub.err{color:var(--err)}
+.btn{display:inline-flex;align-items:center;gap:8px;border:0;border-radius:999px;padding:10px 18px;font-weight:600;font-size:15px;cursor:pointer;white-space:nowrap}
+.btn-primary{background:var(--pencil);color:#fff}
+.btn-primary:hover{background:var(--pencil-ink)}
+.btn-primary:disabled{background:#A8B4C4;cursor:default}
+.btn-quiet{background:var(--paper);color:var(--ink)}
+.btn-quiet:hover{background:#DDE3EA}
+.icon-btn{border:0;background:none;color:var(--muted);width:36px;height:36px;border-radius:50%;cursor:pointer;display:grid;place-items:center;flex:none}
+.icon-btn:hover{background:var(--paper);color:var(--ink)}
+.tally{display:flex;flex-wrap:wrap;gap:8px;padding:0 22px 18px}
+.chip{display:inline-flex;align-items:baseline;gap:6px;background:var(--paper);border-radius:999px;padding:4px 12px;font-size:14px}
+.chip code{font:500 13px var(--mono);color:var(--pencil-ink)}
+.chip b{font-weight:600}
+.chip.zero{opacity:.55}
+.review-toggle{display:flex;align-items:center;justify-content:space-between;width:100%;border:0;border-top:1px solid var(--rule);background:none;padding:14px 22px;cursor:pointer;font-weight:600;font-size:15px;text-align:left}
+.review-toggle:hover{background:#F6F8FA}
+.review-toggle svg{transition:transform .2s}
+.review-toggle[aria-expanded="true"] svg{transform:rotate(180deg)}
+.review{border-top:1px solid var(--rule);display:none}
+.review.open{display:block}
+.rv-head{display:grid;grid-template-columns:1fr 1fr;gap:0;font-size:13.5px;color:var(--muted);padding:10px 22px;background:#F6F8FA;border-bottom:1px solid var(--rule);position:sticky;top:0}
+.rv-row{display:grid;grid-template-columns:1fr 1fr;border-bottom:1px solid var(--rule)}
+.rv-row:last-child{border-bottom:0}
+.rv-row>div{padding:14px 22px;font:400 16.5px/1.6 var(--serif);overflow-wrap:anywhere;white-space:pre-wrap}
+.rv-row>div+div{border-left:1px solid var(--rule);background:#FBFCFD}
+.rv-part{display:inline-block;font:500 12px var(--sans);color:var(--muted);background:var(--paper);border-radius:4px;padding:1px 7px;margin-right:6px;vertical-align:2px}
+.f-b{font-weight:600}.f-i{font-style:italic}.f-u{text-decoration:underline;text-underline-offset:3px}.f-s{text-decoration:line-through}.f-u.f-s{text-decoration:underline line-through}
+.f-sub{vertical-align:sub;font-size:.75em}.f-sup{vertical-align:super;font-size:.75em}
+.t{font:500 .78em var(--mono);color:var(--pencil);background:var(--pencil-wash);border-radius:3px;padding:0 2px}
+.rv-more{padding:14px 22px;text-align:center;border-top:1px solid var(--rule)}
+.rv-empty{padding:22px;color:var(--muted)}
+.spinner{width:18px;height:18px;border:2.5px solid var(--rule);border-top-color:var(--pencil);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Options */
+.opts{position:sticky;top:20px;background:var(--sheet);border-radius:var(--r-lg);padding:22px;box-shadow:0 1px 0 rgba(28,36,48,.06)}
+.opts h2{font:500 21px/1.2 var(--serif);margin:0 0 4px}
+.opts .hint{font-size:14px;color:var(--muted);margin:0 0 18px}
+fieldset{border:0;padding:0;margin:0 0 22px;min-width:0}
+legend{font-weight:600;font-size:15px;padding:0;margin-bottom:10px}
+.fmts{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.fmt{display:flex;align-items:center;justify-content:space-between;gap:6px;border:1.5px solid var(--rule);background:var(--sheet);border-radius:var(--r-md);padding:9px 11px;cursor:pointer;text-align:left}
+.fmt .lbl{font:400 17px/1 var(--serif)}
+.fmt code{font:500 12.5px var(--mono);color:var(--muted)}
+.fmt[aria-pressed="true"]{border-color:var(--pencil);background:var(--pencil-wash)}
+.fmt[aria-pressed="true"] code{color:var(--pencil-ink)}
+.fmt[aria-pressed="false"] .lbl{color:var(--muted);text-decoration-color:var(--muted)}
+.styles{display:flex;flex-direction:column;gap:6px}
+.radio{display:flex;align-items:center;gap:10px;border:1.5px solid var(--rule);border-radius:var(--r-md);padding:9px 12px;cursor:pointer}
+.radio:has(input:checked){border-color:var(--pencil);background:var(--pencil-wash)}
+.radio input{accent-color:var(--pencil);margin:0}
+.radio code{font:500 13px var(--mono)}
+.radio span{color:var(--muted);font-size:13.5px;margin-left:auto}
+.switch{display:grid;grid-template-columns:1fr auto;gap:2px 14px;align-items:start;padding:10px 0;border-top:1px solid var(--rule);cursor:pointer}
+.switch:first-of-type{border-top:0;padding-top:2px}
+.switch .t1{font-size:15px;font-weight:500}
+.switch .t2{grid-column:1;font-size:13.5px;color:var(--muted);line-height:1.45}
+.switch input{appearance:none;-webkit-appearance:none;grid-row:1/3;grid-column:2;width:40px;height:24px;border-radius:999px;background:#C5CED9;position:relative;cursor:pointer;margin:2px 0 0;transition:background .15s}
+.switch input::after{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.2);transition:transform .15s}
+.switch input:checked{background:var(--pencil)}
+.switch input:checked::after{transform:translateX(16px)}
+.status{font-size:13.5px;color:var(--muted);min-height:1.4em;margin:0}
+
+.foot{border-top:1px solid var(--rule);padding:24px 0 40px;color:var(--muted);font-size:14px;display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,20px);background:var(--ink);color:#fff;padding:12px 18px;border-radius:999px;font-size:15px;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:10}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+
+@media (max-width:920px){
+  .hero{grid-template-columns:1fr;gap:28px;padding:36px 0 28px}
+  .lede{max-width:none}
+  .work{grid-template-columns:1fr}
+  .opts{position:static}
+}
+@media (max-width:600px){
+  .wrap{padding:0 16px}
+  .privacy span{display:none}
+  .specimen{padding:20px}
+  .spec-text{font-size:18px}
+  .drop{padding:36px 18px}
+  .file-top{flex-wrap:wrap}
+  .file-top .btn{width:100%;justify-content:center;order:5}
+  .rv-head{display:none}
+  .rv-row{grid-template-columns:1fr}
+  .rv-row>div+div{border-left:0;border-top:1px dashed var(--rule)}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="mast">
+    <div class="brand">
+      <svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true"><rect width="28" height="28" rx="7" fill="#2B50D8"/><path d="M10.5 9 6 14l4.5 5M17.5 9 22 14l-4.5 5" stroke="#fff" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Taglift
+    </div>
+    <div class="privacy">
+      <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+      <span>Files are converted on your device and never uploaded</span>
+    </div>
+  </header>
+
+  <section class="hero">
+    <div>
+      <h1>Turn Word formatting into HTML tags.</h1>
+      <p class="lede">Drop in a .docx. Every bold, italic, underlined, struck-through, subscript and superscript passage comes back as tagged plain text, in a new .docx.</p>
+    </div>
+    <div class="specimen" aria-label="Example">
+      <div class="spec-head">
+        <p>From a credit agreement</p>
+        <div class="seg" role="group" aria-label="Example view">
+          <button type="button" id="vWord" aria-pressed="false">In Word</button>
+          <button type="button" id="vTag" aria-pressed="true">Converted</button>
+        </div>
+      </div>
+      <p class="spec-text" id="spec">in the case of each <span class="tg">&lt;b&gt;</span><span class="b">ABR Loan</span><span class="tg">&lt;/b&gt;</span> that is an <span class="tg">&lt;u&gt;</span><span class="u">Initial</span><span class="tg">&lt;/u&gt;</span> <span class="tg">&lt;u&gt;</span><span class="u">Term</span><span class="tg">&lt;/u&gt;</span> <span class="tg">&lt;u&gt;</span><span class="u">B Loan</span><span class="tg">&lt;/u&gt;</span>, (x) prior to the Amendment No.&nbsp;1 Effective Date, 2.25% <span class="tg">&lt;i&gt;</span><span class="i">per annum</span><span class="tg">&lt;/i&gt;</span></p>
+    </div>
+  </section>
+
+  <main class="work">
+    <section aria-label="Convert files">
+      <label class="drop" id="drop">
+        <input type="file" id="fileInput" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" multiple>
+        <svg class="doc-ic" width="56" height="68" viewBox="0 0 56 68" aria-hidden="true"><path d="M4 2h34l16 16v46a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Z" fill="#fff" stroke="#9AA7B6" stroke-width="2.5"/><path d="M38 2v14a2 2 0 0 0 2 2h14" fill="none" stroke="#9AA7B6" stroke-width="2.5"/><path d="M19 36l-6 6 6 6M37 36l6 6-6 6" stroke="#2B50D8" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M31 33l-6 18" stroke="#2B50D8" stroke-width="3" stroke-linecap="round"/></svg>
+        <div>
+          <h2 id="dropTitle">Drop Word documents here</h2>
+          <p id="dropSub">or <span class="browse">choose files</span>. Several at once is fine.</p>
+        </div>
+      </label>
+      <p class="sample" id="sampleLine">No document handy? <button type="button" class="linkbtn" id="trySample">Convert the sample agreement</button></p>
+      <div class="results" id="results" aria-live="polite"></div>
+    </section>
+
+    <aside class="opts" aria-labelledby="optsTitle">
+      <h2 id="optsTitle">Conversion settings</h2>
+      <p class="hint">Changes apply instantly to files already added.</p>
+
+      <fieldset>
+        <legend>Formatting to convert</legend>
+        <div class="fmts" id="fmts">
+          <button type="button" class="fmt" data-k="b" aria-pressed="true"><span class="lbl" style="font-weight:600">Bold</span><code></code></button>
+          <button type="button" class="fmt" data-k="i" aria-pressed="true"><span class="lbl" style="font-style:italic">Italic</span><code></code></button>
+          <button type="button" class="fmt" data-k="u" aria-pressed="true"><span class="lbl" style="text-decoration:underline;text-underline-offset:3px">Underline</span><code></code></button>
+          <button type="button" class="fmt" data-k="s" aria-pressed="true"><span class="lbl" style="text-decoration:line-through">Strike</span><code></code></button>
+          <button type="button" class="fmt" data-k="sub" aria-pressed="true"><span class="lbl">H<sub style="font-size:.7em">2</sub>O</span><code></code></button>
+          <button type="button" class="fmt" data-k="sup" aria-pressed="true"><span class="lbl">x<sup style="font-size:.7em">2</sup></span><code></code></button>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Tag names</legend>
+        <div class="styles">
+          <label class="radio"><input type="radio" name="tagStyle" value="classic" checked><code>&lt;b&gt; &lt;i&gt; &lt;s&gt;</code><span>Standard</span></label>
+          <label class="radio"><input type="radio" name="tagStyle" value="semantic"><code>&lt;strong&gt; &lt;em&gt; &lt;del&gt;</code><span>Semantic</span></label>
+          <label class="radio"><input type="radio" name="tagStyle" value="legacy"><code>&lt;b&gt; &lt;i&gt; &lt;strike&gt;</code><span>Legacy</span></label>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Options</legend>
+        <label class="switch"><span class="t1">Remove the original formatting</span><span class="t2">Converted text becomes plain, so only the tags show it.</span><input type="checkbox" role="switch" id="oStrip" checked></label>
+        <label class="switch"><span class="t1">Include formatting from styles</span><span class="t2">Headings, hyperlinks and other styled text get tags too.</span><input type="checkbox" role="switch" id="oStyles" checked></label>
+        <label class="switch"><span class="t1">Headers, footers and notes</span><span class="t2">Convert them as well as the main text.</span><input type="checkbox" role="switch" id="oNotes" checked></label>
+        <label class="switch"><span class="t1">Keep edge spaces outside tags</span><span class="t2"><code style="font-family:var(--mono);font-size:12.5px">&lt;b&gt;Loan&lt;/b&gt; </code> rather than <code style="font-family:var(--mono);font-size:12.5px">&lt;b&gt;Loan &lt;/b&gt;</code></span><input type="checkbox" role="switch" id="oTrim" checked></label>
+        <label class="switch"><span class="t1">Escape existing &lt; &gt; &amp;</span><span class="t2">Write them as &amp;lt; &amp;gt; &amp;amp; so the result is valid HTML.</span><input type="checkbox" role="switch" id="oEsc"></label>
+      </fieldset>
+      <p class="status" id="status" aria-live="polite"></p>
+    </aside>
+  </main>
+
+  <footer class="foot">
+    <span>Your documents stay in this browser tab. Nothing is sent to a server.</span>
+    <span>Tables, lists, hyperlinks, fonts and layout are preserved.</span>
+  </footer>
+</div>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+/* Taglift engine — converts Word run formatting into literal HTML tags inside a .docx.
+   Runs in the browser (and in Node for testing, given DOMParser/XMLSerializer). */
+const Taglift = (() => {
+  const W = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
+  const XML_NS = 'http://www.w3.org/XML/1998/namespace';
+  const KEYS = ['b', 'i', 'u', 's', 'sub', 'sup'];
+  const TAGSETS = {
+    classic:  { b: 'b', i: 'i', u: 'u', s: 's', sub: 'sub', sup: 'sup' },
+    semantic: { b: 'strong', i: 'em', u: 'u', s: 'del', sub: 'sub', sup: 'sup' },
+    legacy:   { b: 'b', i: 'i', u: 'u', s: 'strike', sub: 'sub', sup: 'sup' },
+  };
+  // Canonical child order of w:rPr (CT_RPr); Word is strict about it.
+  const RPR_ORDER = ['rStyle','rFonts','b','bCs','i','iCs','caps','smallCaps','strike','dstrike','outline','shadow','emboss','imprint','noProof','snapToGrid','vanish','webHidden','color','spacing','w','kern','position','sz','szCs','highlight','u','effect','bdr','shd','fitText','vertAlign','rtl','cs','em','lang','eastAsianLayout','specVanish','oMath','rPrChange'];
+
+  /* ---------------- ZIP ---------------- */
+  const CRC_TABLE = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+  function crc32(u8) { let c = 0xFFFFFFFF; for (let i = 0; i < u8.length; i++) c = CRC_TABLE[(c ^ u8[i]) & 0xFF] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; }
+  async function streamThrough(u8, stream) {
+    const blob = new Blob([u8]);
+    const out = await new Response(blob.stream().pipeThrough(stream)).arrayBuffer();
+    return new Uint8Array(out);
+  }
+  const inflate = (u8) => streamThrough(u8, new DecompressionStream('deflate-raw'));
+  const deflate = (u8) => streamThrough(u8, new CompressionStream('deflate-raw'));
+
+  function readZip(buf) {
+    const u8 = new Uint8Array(buf), dv = new DataView(u8.buffer, u8.byteOffset, u8.byteLength);
+    if (u8.length >= 4 && u8[0] === 0xD0 && u8[1] === 0xCF && u8[2] === 0x11 && u8[3] === 0xE0)
+      throw new UserError('This file is password-protected or is an old-style .doc file. Remove the password (or re-save it as .docx in Word) and try again.');
+    let e = -1;
+    for (let i = u8.length - 22; i >= Math.max(0, u8.length - 65557); i--) if (dv.getUint32(i, true) === 0x06054b50) { e = i; break; }
+    if (e < 0) throw new UserError('This doesn’t look like a valid .docx file.');
+    const n = dv.getUint16(e + 10, true), cdOff = dv.getUint32(e + 16, true);
+    const td = new TextDecoder();
+    const entries = [];
+    let p = cdOff;
+    for (let k = 0; k < n; k++) {
+      if (dv.getUint32(p, true) !== 0x02014b50) throw new UserError('The .docx file appears to be damaged.');
+      const flags = dv.getUint16(p + 8, true), method = dv.getUint16(p + 10, true);
+      const time = dv.getUint16(p + 12, true), date = dv.getUint16(p + 14, true);
+      const crc = dv.getUint32(p + 16, true), csize = dv.getUint32(p + 20, true), usize = dv.getUint32(p + 24, true);
+      const nlen = dv.getUint16(p + 28, true), xlen = dv.getUint16(p + 30, true), clen = dv.getUint16(p + 32, true);
+      const lho = dv.getUint32(p + 42, true);
+      const nameBytes = u8.slice(p + 46, p + 46 + nlen);
+      const name = td.decode(nameBytes);
+      const ds = lho + 30 + dv.getUint16(lho + 26, true) + dv.getUint16(lho + 28, true);
+      entries.push({ name, nameBytes, flags, method, time, date, crc, csize, usize, raw: u8.subarray(ds, ds + csize) });
+      p += 46 + nlen + xlen + clen;
+    }
+    return entries;
+  }
+  async function entryData(en) {
+    if (en.method === 0) return en.raw;
+    if (en.method === 8) return inflate(en.raw);
+    throw new UserError('Unsupported compression in .docx.');
+  }
+  async function writeZip(entries) {
+    const parts = [], central = [];
+    let off = 0;
+    for (const en of entries) {
+      let { method, crc, csize, usize, raw } = en;
+      if (en.newData) {
+        usize = en.newData.length; crc = crc32(en.newData);
+        raw = await deflate(en.newData); method = 8; csize = raw.length;
+      }
+      const flags = en.flags & 0x0800; // keep UTF-8 flag only; sizes are written up front
+      const nb = en.nameBytes;
+      const lh = new DataView(new ArrayBuffer(30));
+      lh.setUint32(0, 0x04034b50, true); lh.setUint16(4, 20, true); lh.setUint16(6, flags, true); lh.setUint16(8, method, true);
+      lh.setUint16(10, en.time, true); lh.setUint16(12, en.date, true); lh.setUint32(14, crc, true);
+      lh.setUint32(18, csize, true); lh.setUint32(22, usize, true); lh.setUint16(26, nb.length, true); lh.setUint16(28, 0, true);
+      parts.push(new Uint8Array(lh.buffer), nb, raw);
+      const ch = new DataView(new ArrayBuffer(46));
+      ch.setUint32(0, 0x02014b50, true); ch.setUint16(4, 20, true); ch.setUint16(6, 20, true); ch.setUint16(8, flags, true);
+      ch.setUint16(10, method, true); ch.setUint16(12, en.time, true); ch.setUint16(14, en.date, true); ch.setUint32(16, crc, true);
+      ch.setUint32(20, csize, true); ch.setUint32(24, usize, true); ch.setUint16(28, nb.length, true);
+      ch.setUint32(42, off, true);
+      central.push(new Uint8Array(ch.buffer), nb);
+      off += 30 + nb.length + raw.length;
+    }
+    let cdSize = 0; for (const c of central) cdSize += c.length;
+    const eo = new DataView(new ArrayBuffer(22));
+    eo.setUint32(0, 0x06054b50, true); eo.setUint16(8, entries.length, true); eo.setUint16(10, entries.length, true);
+    eo.setUint32(12, cdSize, true); eo.setUint32(16, off, true);
+    return new Blob([...parts, ...central, new Uint8Array(eo.buffer)], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+  }
+
+  class UserError extends Error {}
+
+  /* ---------------- XML helpers ---------------- */
+  const isW = (n, name) => n && n.nodeType === 1 && n.namespaceURI === W && n.localName === name;
+  const kids = (n) => { const a = []; for (let c = n.firstChild; c; c = c.nextSibling) if (c.nodeType === 1) a.push(c); return a; };
+  const child = (n, name) => { for (let c = n && n.firstChild; c; c = c.nextSibling) if (isW(c, name)) return c; return null; };
+  const wattr = (n, name) => n.getAttributeNS(W, name) || n.getAttribute('w:' + name) || '';
+
+  function onOff(el) {
+    if (!el) return undefined;
+    const v = wattr(el, 'val');
+    return !(v === '0' || v === 'false' || v === 'off');
+  }
+  function parseRPr(rPr) {
+    const f = {};
+    if (!rPr) return f;
+    const b = onOff(child(rPr, 'b')); if (b !== undefined) f.b = b;
+    const i = onOff(child(rPr, 'i')); if (i !== undefined) f.i = i;
+    const u = child(rPr, 'u'); if (u) f.u = wattr(u, 'val') !== 'none';
+    const st = onOff(child(rPr, 'strike')), ds = onOff(child(rPr, 'dstrike'));
+    if (st !== undefined || ds !== undefined) f.s = !!(st || ds);
+    const va = child(rPr, 'vertAlign');
+    if (va) { const v = wattr(va, 'val'); f.sub = v === 'subscript'; f.sup = v === 'superscript'; }
+    return f;
+  }
+  const merge = (...fs) => Object.assign({}, ...fs);
+
+  function loadStyles(stylesDoc) {
+    const S = { defaults: {}, byId: {}, defaultPara: null, cache: {} };
+    if (!stylesDoc) return S;
+    const root = stylesDoc.documentElement;
+    const dd = child(root, 'docDefaults');
+    const rd = dd && child(dd, 'rPrDefault');
+    S.defaults = parseRPr(rd && child(rd, 'rPr'));
+    for (const st of kids(root)) {
+      if (!isW(st, 'style')) continue;
+      const id = wattr(st, 'styleId'), type = wattr(st, 'type');
+      const based = child(st, 'basedOn');
+      S.byId[id] = { type, basedOn: based ? wattr(based, 'val') : null, f: parseRPr(child(st, 'rPr')) };
+      if (type === 'paragraph' && /^(1|true|on)$/.test(wattr(st, 'default'))) S.defaultPara = id;
+    }
+    return S;
+  }
+  function styleFmt(S, id, depth = 0) {
+    if (!id || !S.byId[id] || depth > 20) return {};
+    if (S.cache[id]) return S.cache[id];
+    const s = S.byId[id];
+    return (S.cache[id] = merge(styleFmt(S, s.basedOn, depth + 1), s.f));
+  }
+
+  function setRPrChild(rPr, el) {
+    const idx = RPR_ORDER.indexOf(el.localName);
+    for (const c of kids(rPr)) {
+      const ci = RPR_ORDER.indexOf(c.localName);
+      if (c.namespaceURI === W && ci > idx) { rPr.insertBefore(el, c); return; }
+    }
+    rPr.appendChild(el);
+  }
+
+  /* ---------------- core ---------------- */
+  const CONTENT_SKIP = new Set(['rPr', 'lastRenderedPageBreak', 'commentReference', 'annotationRef', 'separator', 'continuationSeparator', 'delText', 'delInstrText', 'instrText', 'dayShort','monthShort','yearShort','dayLong','monthLong','yearLong']);
+  const OPAQUE_WS = { tab: '\t', ptab: '\t', br: '\n', cr: '\n' };
+  const OPAQUE_TEXT = new Set(['noBreakHyphen', 'softHyphen', 'sym', 'footnoteReference', 'endnoteReference', 'footnoteRef', 'endnoteRef', 'pgNum']);
+  const NEUTRAL = new Set(['drawing', 'pict', 'object']);
+  const DELETED = new Set(['del', 'moveFrom']);
+
+  function processPart(doc, S, opts, stats, previews) {
+    const tags = TAGSETS[opts.tagStyle] || TAGSETS.classic;
+    const enabled = KEYS.filter((k) => opts.formats[k]);
+    if (!enabled.length) return false;
+    let changed = false;
+
+    // Map each run to its nearest paragraph, flag deleted runs.
+    const byPara = new Map();
+    const runs = Array.from(doc.getElementsByTagNameNS(W, 'r'));
+    for (const r of runs) {
+      let p = r.parentNode, del = false;
+      while (p && !isW(p, 'p')) { if (p.namespaceURI === W && DELETED.has(p.localName)) del = true; if (isW(p, 'rPrChange')) { p = null; break; } p = p.parentNode; }
+      if (!p) continue;
+      if (!byPara.has(p)) byPara.set(p, []);
+      byPara.get(p).push({ r, del });
+    }
+    const paras = Array.from(doc.getElementsByTagNameNS(W, 'p')).filter((p) => byPara.has(p));
+    const fieldStack = [];
+
+    for (const p of paras) {
+      stats.paragraphs++;
+      // Paragraph style formatting (applies to all runs unless overridden).
+      let pFmt = {};
+      if (opts.styles) {
+        const pPr = child(p, 'pPr'), ps = pPr && child(pPr, 'pStyle');
+        pFmt = styleFmt(S, ps ? wattr(ps, 'val') : S.defaultPara);
+      }
+      // 1. split multi-content runs and build atoms
+      const atoms = [];
+      const touchedRuns = [];
+      for (const { r, del } of byPara.get(p)) {
+        if (!r.parentNode) continue;
+        const rPr = child(r, 'rPr');
+        const content = kids(r).filter((c) => !isW(c, 'rPr'));
+        let pieces = [r];
+        if (content.length > 1) {
+          pieces = content.map((c) => {
+            const nr = r.cloneNode(false);
+            if (rPr) nr.appendChild(rPr.cloneNode(true));
+            nr.appendChild(c);
+            r.parentNode.insertBefore(nr, r);
+            return nr;
+          });
+          r.parentNode.removeChild(r);
+        }
+        if (del) continue;
+        // effective formatting
+        let inherited = merge(opts.styles ? S.defaults : {}, pFmt);
+        const rs = rPr && child(rPr, 'rStyle');
+        if (rs && opts.styles) inherited = merge(inherited, styleFmt(S, wattr(rs, 'val')));
+        const eff = merge(inherited, parseRPr(rPr));
+        const set = new Set(enabled.filter((k) => eff[k]));
+        for (const run of pieces) {
+          const c = kids(run).find((x) => !isW(x, 'rPr'));
+          if (!c || c.namespaceURI !== W) continue;
+          const ln = c.localName;
+          if (ln === 'fldChar') {
+            const t = wattr(c, 'fldCharType');
+            if (t === 'begin') fieldStack.push({ code: true });
+            else if (t === 'separate' && fieldStack.length) fieldStack[fieldStack.length - 1].code = false;
+            else if (t === 'end') fieldStack.pop();
+            continue;
+          }
+          if (fieldStack.some((f) => f.code)) continue;
+          if (CONTENT_SKIP.has(ln)) continue;
+          const info = { run, inherited, set };
+          if (ln === 't') {
+            const txt = c.textContent;
+            if (!txt.length) continue;
+            touchedRuns.push(info);
+            for (const ch of txt) atoms.push({ run, t: c, ch, ws: /\s/.test(ch), set: new Set(set), orig: set, inh: inherited });
+          } else if (OPAQUE_WS[ln]) {
+            touchedRuns.push(info);
+            atoms.push({ run, ch: OPAQUE_WS[ln], ws: true, set: new Set(set), orig: set, opaque: true, inh: inherited });
+          } else if (OPAQUE_TEXT.has(ln)) {
+            touchedRuns.push(info);
+            atoms.push({ run, ch: ln === 'sym' ? '◆' : ln.includes('ootnote') || ln.includes('ndnote') ? '¹' : '-', ws: false, set: new Set(set), orig: set, opaque: true, inh: inherited });
+          } else if (NEUTRAL.has(ln)) {
+            atoms.push({ run, ch: '▣', ws: false, set: new Set(), orig: new Set(), opaque: true, inh: inherited });
+          }
+        }
+      }
+      if (!atoms.length) continue;
+
+      // 2. move edge whitespace outside of tags
+      if (!opts.spacesInside) {
+        for (const k of enabled) {
+          let i = 0;
+          while (i < atoms.length) {
+            if (!atoms[i].set.has(k)) { i++; continue; }
+            let j = i; while (j < atoms.length && atoms[j].set.has(k)) j++;
+            let a = i; while (a < j && atoms[a].ws) atoms[a++].set.delete(k);
+            let b = j - 1; while (b >= a && atoms[b].ws) atoms[b--].set.delete(k);
+            i = j;
+          }
+        }
+      }
+
+      // 3. compute properly nested tag insertions
+      const prefix = new Array(atoms.length).fill('');
+      let suffix = '';
+      const stack = [];
+      let any = false;
+      const spanLen = (k, from) => { let n = 0; while (from + n < atoms.length && atoms[from + n].set.has(k)) n++; return n; };
+      for (let x = 0; x < atoms.length; x++) {
+        const S2 = atoms[x].set;
+        let j = stack.findIndex((k) => !S2.has(k));
+        let s = '';
+        if (j >= 0) { for (let y = stack.length - 1; y >= j; y--) s += `</${tags[stack[y]]}>`; stack.length = j; }
+        const need = enabled.filter((k) => S2.has(k) && !stack.includes(k));
+        need.sort((a, b) => spanLen(b, x) - spanLen(a, x) || KEYS.indexOf(a) - KEYS.indexOf(b));
+        for (const k of need) { s += `<${tags[k]}>`; stack.push(k); stats.tags[k]++; any = true; }
+        prefix[x] = s;
+      }
+      for (let y = stack.length - 1; y >= 0; y--) suffix += `</${tags[stack[y]]}>`;
+
+      if (!any && !(opts.escape && atoms.some((a) => !a.opaque && /[<>&]/.test(a.ch)))) {
+        if (opts.strip) for (const info of touchedRuns) if (stripRun(doc, info, enabled)) changed = true;
+        continue;
+      }
+      changed = true;
+      if (any) stats.changedParagraphs++;
+
+      // preview capture
+      if (any && previews.length < opts.previewLimit) {
+        const segs = []; let out = '';
+        for (let x = 0; x < atoms.length; x++) {
+          const a = atoms[x];
+          const key = [...a.orig].sort().join(',');
+          if (segs.length && segs[segs.length - 1].key === key) segs[segs.length - 1].text += a.ch; else segs.push({ key, fmt: [...a.orig], text: a.ch });
+          out += prefix[x] + esc(a.ch, opts.escape);
+        }
+        previews.push({ before: segs, after: out + suffix, part: opts.partLabel });
+      }
+
+      // 4. write text back
+      const byT = new Map();
+      atoms.forEach((a, x) => {
+        if (a.opaque) {
+          if (prefix[x]) insertTagRun(doc, a.run, prefix[x], 'before', opts, enabled, a);
+          return;
+        }
+        if (!byT.has(a.t)) byT.set(a.t, '');
+        byT.set(a.t, byT.get(a.t) + prefix[x] + esc(a.ch, opts.escape));
+      });
+      const last = atoms[atoms.length - 1];
+      if (suffix) {
+        if (last.opaque) insertTagRun(doc, last.run, suffix, 'after', opts, enabled, last);
+        else byT.set(last.t, byT.get(last.t) + suffix);
+      }
+      for (const [t, txt] of byT) { t.textContent = txt; t.setAttributeNS(XML_NS, 'xml:space', 'preserve'); }
+      if (opts.strip) for (const info of touchedRuns) stripRun(doc, info, enabled);
+    }
+    return changed;
+  }
+  function esc(ch, on) { if (!on) return ch; return ch === '<' ? '&lt;' : ch === '>' ? '&gt;' : ch === '&' ? '&amp;' : ch; }
+
+  function insertTagRun(doc, refRun, text, where, opts, enabled, atom) {
+    const nr = refRun.cloneNode(false);
+    const rPr = child(refRun, 'rPr');
+    if (rPr) nr.appendChild(rPr.cloneNode(true));
+    const t = doc.createElementNS(W, 'w:t');
+    t.setAttributeNS(XML_NS, 'xml:space', 'preserve');
+    t.textContent = text;
+    nr.appendChild(t);
+    refRun.parentNode.insertBefore(nr, where === 'before' ? refRun : refRun.nextSibling);
+    if (opts.strip) stripRun(doc, { run: nr, inherited: atom.inh || {} }, enabled, true);
+  }
+
+  function stripRun(doc, info, enabled, quiet) {
+    const { run, inherited } = info;
+    let rPr = child(run, 'rPr');
+    if (info.stripped) return false;
+    info.stripped = true;
+    let changed = false;
+    const remove = (name, pred) => { const el = rPr && child(rPr, name); if (el && (!pred || pred(el))) { rPr.removeChild(el); changed = true; } };
+    const addOff = (name, val) => {
+      if (!rPr) { rPr = doc.createElementNS(W, 'w:rPr'); run.insertBefore(rPr, run.firstChild); }
+      const el = doc.createElementNS(W, 'w:' + name); el.setAttributeNS(W, 'w:val', val); setRPrChild(rPr, el); changed = true;
+    };
+    const en = new Set(enabled);
+    if (en.has('b')) { remove('b'); remove('bCs'); if (inherited.b) { addOff('b', '0'); addOff('bCs', '0'); } }
+    if (en.has('i')) { remove('i'); remove('iCs'); if (inherited.i) { addOff('i', '0'); addOff('iCs', '0'); } }
+    if (en.has('u')) { remove('u'); if (inherited.u) addOff('u', 'none'); }
+    if (en.has('s')) { remove('strike'); remove('dstrike'); if (inherited.s) { addOff('strike', '0'); addOff('dstrike', '0'); } }
+    if (en.has('sub') || en.has('sup')) {
+      remove('vertAlign', (el) => { const v = wattr(el, 'val'); return (v === 'subscript' && en.has('sub')) || (v === 'superscript' && en.has('sup')); });
+      if ((inherited.sub && en.has('sub')) || (inherited.sup && en.has('sup'))) addOff('vertAlign', 'baseline');
+    }
+    if (rPr && !rPr.firstChild) run.removeChild(rPr);
+    return changed;
+  }
+
+  /* ---------------- public API ---------------- */
+  const PART_RE = /^word\/(document\d*|header\d+|footer\d+|footnotes|endnotes)\.xml$/;
+  function partLabel(name) {
+    const m = name.match(PART_RE)[1];
+    if (m.startsWith('document')) return 'Body';
+    if (m.startsWith('header')) return 'Header';
+    if (m.startsWith('footer')) return 'Footer';
+    return m === 'footnotes' ? 'Footnotes' : 'Endnotes';
+  }
+
+  async function convert(buffer, opts, env = {}) {
+    const DP = env.DOMParser || DOMParser, XS = env.XMLSerializer || XMLSerializer;
+    opts = Object.assign({ formats: { b: true, i: true, u: true, s: true, sub: true, sup: true }, tagStyle: 'classic', strip: true, styles: true, notes: true, spacesInside: false, escape: false, previewLimit: 300 }, opts);
+    const entries = readZip(buffer);
+    const byName = Object.fromEntries(entries.map((e) => [e.name, e]));
+    if (!Object.keys(byName).some((n) => /^word\/document\d*\.xml$/.test(n))) throw new UserError('This file has no Word document inside. Is it really a .docx?');
+    const td = new TextDecoder(), te = new TextEncoder();
+    const parse = (s) => { const d = new DP().parseFromString(s, 'application/xml'); const err = d.getElementsByTagName('parsererror')[0]; if (err) throw new UserError('The document contains XML that couldn’t be read.'); return d; };
+    const S = byName['word/styles.xml'] ? loadStyles(parse(td.decode(await entryData(byName['word/styles.xml'])))) : loadStyles(null);
+    const stats = { paragraphs: 0, changedParagraphs: 0, tags: Object.fromEntries(KEYS.map((k) => [k, 0])) };
+    const previews = [];
+    const order = (n) => (n.startsWith('word/document') ? 0 : 1);
+    const targets = entries.filter((e) => PART_RE.test(e.name) && (opts.notes || e.name.startsWith('word/document'))).sort((a, b) => order(a.name) - order(b.name));
+    for (const en of targets) {
+      let xml = td.decode(await entryData(en));
+      const decl = xml.match(/^﻿?<\?xml[^>]*\?>\s*/);
+      const doc = parse(xml);
+      if (processPart(doc, S, Object.assign({}, opts, { partLabel: partLabel(en.name) }), stats, previews)) {
+        let out = new XS().serializeToString(doc);
+        if (!/^<\?xml/.test(out)) out = (decl ? decl[0].replace(/^﻿/, '').trimEnd() : '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>') + '\r\n' + out;
+        en.newData = te.encode(out);
+      }
+    }
+    const blob = await writeZip(entries);
+    return { blob, stats, previews };
+  }
+
+  return { convert, UserError, KEYS, TAGSETS, _readZip: readZip };
+})();
+
+
+</script>
+<script>
+(() => {
+const SAMPLE_B64 = "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";
+const $ = (s, r = document) => r.querySelector(s);
+const KEYS = Taglift.KEYS;
+const FMT_NAMES = { b: 'bold', i: 'italic', u: 'underline', s: 'strike-through', sub: 'subscript', sup: 'superscript' };
+
+/* ---------- Specimen ---------- */
+const spec = $('#spec'), vWord = $('#vWord'), vTag = $('#vTag');
+function setView(tagged) { spec.classList.toggle('tagged', tagged); vTag.setAttribute('aria-pressed', tagged); vWord.setAttribute('aria-pressed', !tagged); }
+vWord.onclick = () => setView(false); vTag.onclick = () => setView(true);
+setView(false);
+if (!matchMedia('(prefers-reduced-motion: reduce)').matches) setTimeout(() => setView(true), 900); else setView(true);
+
+/* ---------- Options ---------- */
+const state = { files: [], opts: null };
+function readOpts() {
+  const formats = {};
+  document.querySelectorAll('.fmt').forEach((b) => formats[b.dataset.k] = b.getAttribute('aria-pressed') === 'true');
+  return {
+    formats, tagStyle: document.querySelector('input[name=tagStyle]:checked').value,
+    strip: $('#oStrip').checked, styles: $('#oStyles').checked, notes: $('#oNotes').checked,
+    spacesInside: !$('#oTrim').checked, escape: $('#oEsc').checked,
+  };
+}
+function paintTagNames() {
+  const t = Taglift.TAGSETS[document.querySelector('input[name=tagStyle]:checked').value];
+  document.querySelectorAll('.fmt').forEach((b) => b.querySelector('code').textContent = `<${t[b.dataset.k]}>`);
+}
+try { const saved = JSON.parse(localStorage.getItem('taglift-opts') || 'null'); if (saved) applySaved(saved); } catch (e) {}
+function applySaved(o) {
+  document.querySelectorAll('.fmt').forEach((b) => { if (o.formats && b.dataset.k in o.formats) b.setAttribute('aria-pressed', !!o.formats[b.dataset.k]); });
+  const r = document.querySelector(`input[name=tagStyle][value="${o.tagStyle}"]`); if (r) r.checked = true;
+  $('#oStrip').checked = o.strip !== false; $('#oStyles').checked = o.styles !== false; $('#oNotes').checked = o.notes !== false;
+  $('#oTrim').checked = !o.spacesInside; $('#oEsc').checked = !!o.escape;
+}
+paintTagNames();
+let rerunTimer;
+function optsChanged() {
+  paintTagNames();
+  state.opts = readOpts();
+  try { localStorage.setItem('taglift-opts', JSON.stringify(state.opts)); } catch (e) {}
+  const none = !KEYS.some((k) => state.opts.formats[k]);
+  $('#status').textContent = none ? 'Choose at least one kind of formatting to convert.' : '';
+  if (!state.files.length) return;
+  clearTimeout(rerunTimer);
+  rerunTimer = setTimeout(async () => {
+    $('#status').textContent = 'Updating…';
+    for (const f of state.files) await run(f);
+    $('#status').textContent = none ? 'Choose at least one kind of formatting to convert.' : 'Updated with the new settings.';
+  }, 180);
+}
+document.querySelectorAll('.fmt').forEach((b) => b.onclick = () => { b.setAttribute('aria-pressed', b.getAttribute('aria-pressed') !== 'true'); optsChanged(); });
+document.querySelectorAll('.opts input').forEach((i) => i.addEventListener('change', optsChanged));
+state.opts = readOpts();
+
+/* ---------- Intake ---------- */
+const drop = $('#drop'), input = $('#fileInput');
+['dragenter', 'dragover'].forEach((e) => drop.addEventListener(e, (ev) => { ev.preventDefault(); drop.classList.add('over'); }));
+['dragleave', 'drop'].forEach((e) => drop.addEventListener(e, (ev) => { ev.preventDefault(); drop.classList.remove('over'); }));
+drop.addEventListener('drop', (ev) => addFiles(ev.dataTransfer.files));
+// allow dropping anywhere on the page
+window.addEventListener('dragover', (e) => e.preventDefault());
+window.addEventListener('drop', (e) => { e.preventDefault(); if (!drop.contains(e.target)) addFiles(e.dataTransfer.files); });
+input.addEventListener('change', () => { addFiles(input.files); input.value = ''; });
+$('#trySample').onclick = () => {
+  const bin = atob(SAMPLE_B64), u8 = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+  addFiles([new File([u8], 'Sample credit agreement excerpt.docx')]);
+};
+
+let uid = 0;
+async function addFiles(list) {
+  const arr = Array.from(list || []);
+  if (!arr.length) return;
+  drop.classList.add('compact');
+  $('#dropTitle').textContent = 'Add more documents';
+  $('#sampleLine').hidden = true;
+  for (const file of arr) {
+    const f = { id: ++uid, file, name: file.name, el: null, result: null, error: null, open: false, shown: 40 };
+    state.files.unshift(f);
+    f.el = document.createElement('article');
+    f.el.className = 'file';
+    $('#results').prepend(f.el);
+    if (!/\.docx$/i.test(file.name)) {
+      f.error = /\.doc$/i.test(file.name) ? 'This is an older .doc file. Open it in Word and save it as .docx, then add it again.' : 'Only Word .docx files can be converted.';
+      render(f); continue;
+    }
+    try { f.buf = await file.arrayBuffer(); } catch (e) { f.error = 'The file couldn’t be read.'; render(f); continue; }
+    await run(f);
+  }
+}
+async function run(f) {
+  if (!f.buf) return;
+  f.busy = true; render(f);
+  try {
+    const opts = Object.assign({}, state.opts, { previewLimit: 400 });
+    f.result = await Taglift.convert(f.buf.slice(0), opts);
+    f.error = null;
+  } catch (e) {
+    console.error(e);
+    f.result = null;
+    f.error = e instanceof Taglift.UserError ? e.message : 'Something in this document couldn’t be converted. Try re-saving it in Word and adding it again.';
+  }
+  f.busy = false; render(f);
+}
+
+/* ---------- Render ---------- */
+const esc = (s) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+const TAG_RE = /<\/?(?:b|i|u|s|sub|sup|strong|em|del|strike)>/g;
+function tagged(s) {
+  let out = '', last = 0, m;
+  TAG_RE.lastIndex = 0;
+  while ((m = TAG_RE.exec(s))) { out += esc(s.slice(last, m.index)) + `<span class="t">${esc(m[0])}</span>`; last = m.index + m[0].length; }
+  return out + esc(s.slice(last));
+}
+function before(segs) {
+  return segs.map((sg) => sg.fmt.length ? `<span class="${sg.fmt.map((k) => 'f-' + k).join(' ')}">${esc(sg.text)}</span>` : esc(sg.text)).join('');
+}
+const outName = (n) => n.replace(/\.docx$/i, '') + ' (tagged).docx';
+const ICON_X = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>';
+const ICON_DL = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 19h14"/></svg>';
+const ICON_CHEV = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>';
+
+function render(f) {
+  const r = f.result, el = f.el;
+  let html = '<div class="file-top">';
+  if (f.busy) html += `<div class="file-ic"><div class="spinner" aria-hidden="true"></div></div>`;
+  else if (f.error) html += `<div class="file-ic bad">!</div>`;
+  else html += `<div class="file-ic done">DOCX</div>`;
+  html += `<div class="file-meta"><div class="file-name" title="${esc(f.name)}">${esc(f.name)}</div>`;
+  if (f.busy) html += `<div class="file-sub">Converting…</div>`;
+  else if (f.error) html += `<div class="file-sub err">${esc(f.error)}</div>`;
+  else {
+    const total = KEYS.reduce((a, k) => a + r.stats.tags[k], 0);
+    html += `<div class="file-sub">${total ? `${total.toLocaleString()} formatted passage${total === 1 ? '' : 's'} tagged in ${r.stats.changedParagraphs.toLocaleString()} of ${r.stats.paragraphs.toLocaleString()} paragraphs` : 'No matching formatting found. The download is unchanged.'}</div>`;
+  }
+  html += '</div>';
+  if (r && !f.busy && !f.error) html += `<button class="btn btn-primary" data-act="dl">${ICON_DL}Download .docx</button>`;
+  html += `<button class="icon-btn" data-act="rm" aria-label="Remove ${esc(f.name)}">${ICON_X}</button></div>`;
+
+  if (r && !f.busy && !f.error) {
+    const t = Taglift.TAGSETS[state.opts.tagStyle];
+    html += '<div class="tally">' + KEYS.filter((k) => state.opts.formats[k]).map((k) =>
+      `<span class="chip${r.stats.tags[k] ? '' : ' zero'}"><code>&lt;${t[k]}&gt;</code><b>${r.stats.tags[k].toLocaleString()}</b> ${FMT_NAMES[k]}</span>`).join('') + '</div>';
+    if (r.previews.length) {
+      html += `<button class="review-toggle" data-act="rv" aria-expanded="${f.open}">Review the changes ${ICON_CHEV}</button>`;
+      html += `<div class="review${f.open ? ' open' : ''}"><div class="rv-head"><span>In Word</span><span>Converted</span></div>`;
+      for (const p of r.previews.slice(0, f.shown)) {
+        const part = p.part !== 'Body' ? `<span class="rv-part">${p.part}</span>` : '';
+        html += `<div class="rv-row"><div>${part}${before(p.before)}</div><div>${tagged(p.after)}</div></div>`;
+      }
+      if (r.previews.length > f.shown) html += `<div class="rv-more"><button class="btn btn-quiet" data-act="more">Show ${Math.min(40, r.previews.length - f.shown)} more paragraphs</button></div>`;
+      else if (r.stats.changedParagraphs > r.previews.length) html += `<div class="rv-empty">Showing the first ${r.previews.length} changed paragraphs. The download includes all ${r.stats.changedParagraphs.toLocaleString()}.</div>`;
+      html += '</div>';
+    }
+  }
+  el.innerHTML = html;
+  el.querySelectorAll('[data-act]').forEach((b) => b.onclick = () => act(f, b.dataset.act, b));
+}
+
+async function act(f, a, btn) {
+  if (a === 'rm') {
+    state.files = state.files.filter((x) => x !== f); f.el.remove();
+    if (!state.files.length) { drop.classList.remove('compact'); $('#dropTitle').textContent = 'Drop Word documents here'; $('#sampleLine').hidden = false; }
+    return;
+  }
+  if (a === 'rv') { f.open = !f.open; render(f); return; }
+  if (a === 'more') { f.shown += 40; render(f); return; }
+  if (a === 'dl') await download(f.result.blob, outName(f.name), btn);
+}
+
+/* ---------- Download ---------- */
+let dlNs;
+const dlReady = (async () => {
+  try { if (window.claude && typeof window.claude.use === 'function') dlNs = await window.claude.use('downloads'); } catch (e) { dlNs = null; }
+})();
+async function download(blob, filename, btn) {
+  btn.disabled = true;
+  try {
+    if (window.claude && typeof window.claude.use === 'function') await dlReady;
+    if (dlNs) {
+      try { await dlNs.save({ filename, data: blob }); toast('Downloaded ' + filename); }
+      catch (e) {
+        if (e && e.code === 'declined') return;
+        if (e && e.code === 'rate_limited') { toast('A download prompt is already open.'); return; }
+        fallback(blob, filename);
+      }
+    } else fallback(blob, filename);
+  } finally { btn.disabled = false; }
+}
+function fallback(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 4000);
+  toast('Downloaded ' + filename);
+}
+let toastT;
+function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), 2600); }
+})();
+</script>
+</body>
+</html>

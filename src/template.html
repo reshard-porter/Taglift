@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Taglift — Word formatting to HTML tags</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400;1,6..72,500&family=Schibsted+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#E9EDF2; --sheet:#FFFFFF; --ink:#1C2430; --muted:#5E6B7A; --rule:#D3DAE3;
+  --pencil:#2B50D8; --pencil-ink:#1D3BB0; --pencil-wash:#E6ECFF; --ok:#1E7A55; --err:#B3261E; --err-wash:#FCECEA;
+  --serif:'Newsreader',Georgia,serif; --sans:'Schibsted Grotesk',system-ui,sans-serif; --mono:'IBM Plex Mono',ui-monospace,monospace;
+  --r-sm:6px; --r-md:10px; --r-lg:16px;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--paper);color:var(--ink);font:400 16px/1.55 var(--sans);-webkit-font-smoothing:antialiased}
+button,input{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--pencil);outline-offset:2px;border-radius:4px}
+.wrap{max-width:1160px;margin:0 auto;padding:0 28px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* Masthead */
+.mast{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:22px 0 0}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:19px;letter-spacing:-.01em}
+.brand svg{display:block}
+.privacy{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:14px}
+.privacy svg{flex:none}
+
+/* Hero */
+.hero{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:56px;align-items:end;padding:56px 0 40px}
+h1{font:500 clamp(38px,5.2vw,62px)/1.02 var(--serif);letter-spacing:-.025em;margin:0 0 20px}
+.lede{font-size:18px;color:var(--muted);max-width:34ch;margin:0}
+.specimen{background:var(--sheet);border-radius:var(--r-lg);padding:26px 30px 22px;box-shadow:0 1px 0 rgba(28,36,48,.06),0 18px 40px -24px rgba(28,36,48,.35)}
+.spec-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
+.spec-head p{margin:0;font-size:14px;color:var(--muted)}
+.seg{display:inline-flex;background:var(--paper);border-radius:999px;padding:3px}
+.seg button{white-space:nowrap;border:0;background:none;padding:6px 14px;border-radius:999px;font-size:14px;font-weight:500;color:var(--muted);cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--sheet);color:var(--ink);box-shadow:0 1px 2px rgba(28,36,48,.15)}
+.spec-text{font:400 21px/1.6 var(--serif);margin:0;min-height:5.2em}
+.spec-text .b{font-weight:600}.spec-text .i{font-style:italic}.spec-text .u{text-decoration:underline;text-underline-offset:3px}
+.spec-text .tg{font:500 .72em var(--mono);color:var(--pencil);display:inline-block;max-width:0;opacity:0;overflow:hidden;vertical-align:baseline;white-space:nowrap;transition:max-width .5s cubic-bezier(.2,.7,.2,1),opacity .35s}
+.spec-text.tagged .tg{max-width:4.5em;opacity:1}
+.spec-text.tagged .b{font-weight:400}.spec-text.tagged .i{font-style:normal}.spec-text.tagged .u{text-decoration:none}
+.spec-text .b,.spec-text .i,.spec-text .u{transition:font-weight .3s}
+
+/* Workspace */
+.work{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:28px;align-items:start;padding-bottom:72px}
+.drop{display:block;position:relative;background:var(--sheet);border:2px dashed #B9C3D0;border-radius:var(--r-lg);padding:52px 28px;text-align:center;cursor:pointer;transition:border-color .15s,background .15s}
+.drop:hover{border-color:var(--pencil)}
+.drop.over{border-color:var(--pencil);border-style:solid;background:var(--pencil-wash)}
+.drop input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%}
+.drop .doc-ic{margin:0 auto 18px;display:block}
+.drop h2{font:500 26px/1.2 var(--serif);margin:0 0 6px;letter-spacing:-.01em}
+.drop p{margin:0;color:var(--muted)}
+.drop .browse{color:var(--pencil-ink);font-weight:600;text-decoration:underline;text-underline-offset:3px}
+.drop.compact{padding:22px 24px;display:flex;align-items:center;gap:16px;text-align:left}
+.drop.compact .doc-ic{margin:0;width:34px;height:42px}
+.drop.compact h2{font-size:19px;margin:0}
+.sample{margin:14px 0 0;font-size:14.5px;color:var(--muted);text-align:center}
+.linkbtn{background:none;border:0;padding:0;color:var(--pencil-ink);font-weight:600;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+
+/* Results */
+.results{display:flex;flex-direction:column;gap:16px;margin-top:20px}
+.file{background:var(--sheet);border-radius:var(--r-lg);box-shadow:0 1px 0 rgba(28,36,48,.06),0 10px 30px -22px rgba(28,36,48,.4);overflow:hidden}
+.file-top{display:flex;align-items:center;gap:16px;padding:20px 22px}
+.file-ic{flex:none;width:40px;height:48px;border-radius:5px;background:var(--paper);display:grid;place-items:center;font:600 10px var(--mono);color:var(--muted);position:relative}
+.file-ic.done{background:var(--pencil-wash);color:var(--pencil-ink)}
+.file-ic.bad{background:var(--err-wash);color:var(--err)}
+.file-meta{min-width:0;flex:1}
+.file-name{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.file-sub{font-size:14px;color:var(--muted)}
+.file-sub.err{color:var(--err)}
+.btn{display:inline-flex;align-items:center;gap:8px;border:0;border-radius:999px;padding:10px 18px;font-weight:600;font-size:15px;cursor:pointer;white-space:nowrap}
+.btn-primary{background:var(--pencil);color:#fff}
+.btn-primary:hover{background:var(--pencil-ink)}
+.btn-primary:disabled{background:#A8B4C4;cursor:default}
+.btn-quiet{background:var(--paper);color:var(--ink)}
+.btn-quiet:hover{background:#DDE3EA}
+.icon-btn{border:0;background:none;color:var(--muted);width:36px;height:36px;border-radius:50%;cursor:pointer;display:grid;place-items:center;flex:none}
+.icon-btn:hover{background:var(--paper);color:var(--ink)}
+.tally{display:flex;flex-wrap:wrap;gap:8px;padding:0 22px 18px}
+.chip{display:inline-flex;align-items:baseline;gap:6px;background:var(--paper);border-radius:999px;padding:4px 12px;font-size:14px}
+.chip code{font:500 13px var(--mono);color:var(--pencil-ink)}
+.chip b{font-weight:600}
+.chip.zero{opacity:.55}
+.review-toggle{display:flex;align-items:center;justify-content:space-between;width:100%;border:0;border-top:1px solid var(--rule);background:none;padding:14px 22px;cursor:pointer;font-weight:600;font-size:15px;text-align:left}
+.review-toggle:hover{background:#F6F8FA}
+.review-toggle svg{transition:transform .2s}
+.review-toggle[aria-expanded="true"] svg{transform:rotate(180deg)}
+.review{border-top:1px solid var(--rule);display:none}
+.review.open{display:block}
+.rv-head{display:grid;grid-template-columns:1fr 1fr;gap:0;font-size:13.5px;color:var(--muted);padding:10px 22px;background:#F6F8FA;border-bottom:1px solid var(--rule);position:sticky;top:0}
+.rv-row{display:grid;grid-template-columns:1fr 1fr;border-bottom:1px solid var(--rule)}
+.rv-row:last-child{border-bottom:0}
+.rv-row>div{padding:14px 22px;font:400 16.5px/1.6 var(--serif);overflow-wrap:anywhere;white-space:pre-wrap}
+.rv-row>div+div{border-left:1px solid var(--rule);background:#FBFCFD}
+.rv-part{display:inline-block;font:500 12px var(--sans);color:var(--muted);background:var(--paper);border-radius:4px;padding:1px 7px;margin-right:6px;vertical-align:2px}
+.f-b{font-weight:600}.f-i{font-style:italic}.f-u{text-decoration:underline;text-underline-offset:3px}.f-s{text-decoration:line-through}.f-u.f-s{text-decoration:underline line-through}
+.f-sub{vertical-align:sub;font-size:.75em}.f-sup{vertical-align:super;font-size:.75em}
+.t{font:500 .78em var(--mono);color:var(--pencil);background:var(--pencil-wash);border-radius:3px;padding:0 2px}
+.rv-more{padding:14px 22px;text-align:center;border-top:1px solid var(--rule)}
+.rv-empty{padding:22px;color:var(--muted)}
+.spinner{width:18px;height:18px;border:2.5px solid var(--rule);border-top-color:var(--pencil);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Options */
+.opts{position:sticky;top:20px;background:var(--sheet);border-radius:var(--r-lg);padding:22px;box-shadow:0 1px 0 rgba(28,36,48,.06)}
+.opts h2{font:500 21px/1.2 var(--serif);margin:0 0 4px}
+.opts .hint{font-size:14px;color:var(--muted);margin:0 0 18px}
+fieldset{border:0;padding:0;margin:0 0 22px;min-width:0}
+legend{font-weight:600;font-size:15px;padding:0;margin-bottom:10px}
+.fmts{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.fmt{display:flex;align-items:center;justify-content:space-between;gap:6px;border:1.5px solid var(--rule);background:var(--sheet);border-radius:var(--r-md);padding:9px 11px;cursor:pointer;text-align:left}
+.fmt .lbl{font:400 17px/1 var(--serif)}
+.fmt code{font:500 12.5px var(--mono);color:var(--muted)}
+.fmt[aria-pressed="true"]{border-color:var(--pencil);background:var(--pencil-wash)}
+.fmt[aria-pressed="true"] code{color:var(--pencil-ink)}
+.fmt[aria-pressed="false"] .lbl{color:var(--muted);text-decoration-color:var(--muted)}
+.styles{display:flex;flex-direction:column;gap:6px}
+.radio{display:flex;align-items:center;gap:10px;border:1.5px solid var(--rule);border-radius:var(--r-md);padding:9px 12px;cursor:pointer}
+.radio:has(input:checked){border-color:var(--pencil);background:var(--pencil-wash)}
+.radio input{accent-color:var(--pencil);margin:0}
+.radio code{font:500 13px var(--mono)}
+.radio span{color:var(--muted);font-size:13.5px;margin-left:auto}
+.switch{display:grid;grid-template-columns:1fr auto;gap:2px 14px;align-items:start;padding:10px 0;border-top:1px solid var(--rule);cursor:pointer}
+.switch:first-of-type{border-top:0;padding-top:2px}
+.switch .t1{font-size:15px;font-weight:500}
+.switch .t2{grid-column:1;font-size:13.5px;color:var(--muted);line-height:1.45}
+.switch input{appearance:none;-webkit-appearance:none;grid-row:1/3;grid-column:2;width:40px;height:24px;border-radius:999px;background:#C5CED9;position:relative;cursor:pointer;margin:2px 0 0;transition:background .15s}
+.switch input::after{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.2);transition:transform .15s}
+.switch input:checked{background:var(--pencil)}
+.switch input:checked::after{transform:translateX(16px)}
+.status{font-size:13.5px;color:var(--muted);min-height:1.4em;margin:0}
+
+.foot{border-top:1px solid var(--rule);padding:24px 0 40px;color:var(--muted);font-size:14px;display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,20px);background:var(--ink);color:#fff;padding:12px 18px;border-radius:999px;font-size:15px;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:10}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+
+@media (max-width:920px){
+  .hero{grid-template-columns:1fr;gap:28px;padding:36px 0 28px}
+  .lede{max-width:none}
+  .work{grid-template-columns:1fr}
+  .opts{position:static}
+}
+@media (max-width:600px){
+  .wrap{padding:0 16px}
+  .privacy span{display:none}
+  .specimen{padding:20px}
+  .spec-text{font-size:18px}
+  .drop{padding:36px 18px}
+  .file-top{flex-wrap:wrap}
+  .file-top .btn{width:100%;justify-content:center;order:5}
+  .rv-head{display:none}
+  .rv-row{grid-template-columns:1fr}
+  .rv-row>div+div{border-left:0;border-top:1px dashed var(--rule)}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="mast">
+    <div class="brand">
+      <svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true"><rect width="28" height="28" rx="7" fill="#2B50D8"/><path d="M10.5 9 6 14l4.5 5M17.5 9 22 14l-4.5 5" stroke="#fff" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Taglift
+    </div>
+    <div class="privacy">
+      <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+      <span>Files are converted on your device and never uploaded</span>
+    </div>
+  </header>
+
+  <section class="hero">
+    <div>
+      <h1>Turn Word formatting into HTML tags.</h1>
+      <p class="lede">Drop in a .docx. Every bold, italic, underlined, struck-through, subscript and superscript passage comes back as tagged plain text, in a new .docx.</p>
+    </div>
+    <div class="specimen" aria-label="Example">
+      <div class="spec-head">
+        <p>From a credit agreement</p>
+        <div class="seg" role="group" aria-label="Example view">
+          <button type="button" id="vWord" aria-pressed="false">In Word</button>
+          <button type="button" id="vTag" aria-pressed="true">Converted</button>
+        </div>
+      </div>
+      <p class="spec-text" id="spec">in the case of each <span class="tg">&lt;b&gt;</span><span class="b">ABR Loan</span><span class="tg">&lt;/b&gt;</span> that is an <span class="tg">&lt;u&gt;</span><span class="u">Initial</span><span class="tg">&lt;/u&gt;</span> <span class="tg">&lt;u&gt;</span><span class="u">Term</span><span class="tg">&lt;/u&gt;</span> <span class="tg">&lt;u&gt;</span><span class="u">B Loan</span><span class="tg">&lt;/u&gt;</span>, (x) prior to the Amendment No.&nbsp;1 Effective Date, 2.25% <span class="tg">&lt;i&gt;</span><span class="i">per annum</span><span class="tg">&lt;/i&gt;</span></p>
+    </div>
+  </section>
+
+  <main class="work">
+    <section aria-label="Convert files">
+      <label class="drop" id="drop">
+        <input type="file" id="fileInput" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" multiple>
+        <svg class="doc-ic" width="56" height="68" viewBox="0 0 56 68" aria-hidden="true"><path d="M4 2h34l16 16v46a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Z" fill="#fff" stroke="#9AA7B6" stroke-width="2.5"/><path d="M38 2v14a2 2 0 0 0 2 2h14" fill="none" stroke="#9AA7B6" stroke-width="2.5"/><path d="M19 36l-6 6 6 6M37 36l6 6-6 6" stroke="#2B50D8" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M31 33l-6 18" stroke="#2B50D8" stroke-width="3" stroke-linecap="round"/></svg>
+        <div>
+          <h2 id="dropTitle">Drop Word documents here</h2>
+          <p id="dropSub">or <span class="browse">choose files</span>. Several at once is fine.</p>
+        </div>
+      </label>
+      <p class="sample" id="sampleLine">No document handy? <button type="button" class="linkbtn" id="trySample">Convert the sample agreement</button></p>
+      <div class="results" id="results" aria-live="polite"></div>
+    </section>
+
+    <aside class="opts" aria-labelledby="optsTitle">
+      <h2 id="optsTitle">Conversion settings</h2>
+      <p class="hint">Changes apply instantly to files already added.</p>
+
+      <fieldset>
+        <legend>Formatting to convert</legend>
+        <div class="fmts" id="fmts">
+          <button type="button" class="fmt" data-k="b" aria-pressed="true"><span class="lbl" style="font-weight:600">Bold</span><code></code></button>
+          <button type="button" class="fmt" data-k="i" aria-pressed="true"><span class="lbl" style="font-style:italic">Italic</span><code></code></button>
+          <button type="button" class="fmt" data-k="u" aria-pressed="true"><span class="lbl" style="text-decoration:underline;text-underline-offset:3px">Underline</span><code></code></button>
+          <button type="button" class="fmt" data-k="s" aria-pressed="true"><span class="lbl" style="text-decoration:line-through">Strike</span><code></code></button>
+          <button type="button" class="fmt" data-k="sub" aria-pressed="true"><span class="lbl">H<sub style="font-size:.7em">2</sub>O</span><code></code></button>
+          <button type="button" class="fmt" data-k="sup" aria-pressed="true"><span class="lbl">x<sup style="font-size:.7em">2</sup></span><code></code></button>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Tag names</legend>
+        <div class="styles">
+          <label class="radio"><input type="radio" name="tagStyle" value="classic" checked><code>&lt;b&gt; &lt;i&gt; &lt;s&gt;</code><span>Standard</span></label>
+          <label class="radio"><input type="radio" name="tagStyle" value="semantic"><code>&lt;strong&gt; &lt;em&gt; &lt;del&gt;</code><span>Semantic</span></label>
+          <label class="radio"><input type="radio" name="tagStyle" value="legacy"><code>&lt;b&gt; &lt;i&gt; &lt;strike&gt;</code><span>Legacy</span></label>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Options</legend>
+        <label class="switch"><span class="t1">Remove the original formatting</span><span class="t2">Converted text becomes plain, so only the tags show it.</span><input type="checkbox" role="switch" id="oStrip" checked></label>
+        <label class="switch"><span class="t1">Include formatting from styles</span><span class="t2">Headings, hyperlinks and other styled text get tags too.</span><input type="checkbox" role="switch" id="oStyles" checked></label>
+        <label class="switch"><span class="t1">Headers, footers and notes</span><span class="t2">Convert them as well as the main text.</span><input type="checkbox" role="switch" id="oNotes" checked></label>
+        <label class="switch"><span class="t1">Keep edge spaces outside tags</span><span class="t2"><code style="font-family:var(--mono);font-size:12.5px">&lt;b&gt;Loan&lt;/b&gt; </code> rather than <code style="font-family:var(--mono);font-size:12.5px">&lt;b&gt;Loan &lt;/b&gt;</code></span><input type="checkbox" role="switch" id="oTrim" checked></label>
+        <label class="switch"><span class="t1">Escape existing &lt; &gt; &amp;</span><span class="t2">Write them as &amp;lt; &amp;gt; &amp;amp; so the result is valid HTML.</span><input type="checkbox" role="switch" id="oEsc"></label>
+      </fieldset>
+      <p class="status" id="status" aria-live="polite"></p>
+    </aside>
+  </main>
+
+  <footer class="foot">
+    <span>Your documents stay in this browser tab. Nothing is sent to a server.</span>
+    <span>Tables, lists, hyperlinks, fonts and layout are preserved.</span>
+  </footer>
+</div>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+/*ENGINE*/
+</script>
+<script>
+(() => {
+const SAMPLE_B64 = "/*SAMPLE*/";
+const $ = (s, r = document) => r.querySelector(s);
+const KEYS = Taglift.KEYS;
+const FMT_NAMES = { b: 'bold', i: 'italic', u: 'underline', s: 'strike-through', sub: 'subscript', sup: 'superscript' };
+
+/* ---------- Specimen ---------- */
+const spec = $('#spec'), vWord = $('#vWord'), vTag = $('#vTag');
+function setView(tagged) { spec.classList.toggle('tagged', tagged); vTag.setAttribute('aria-pressed', tagged); vWord.setAttribute('aria-pressed', !tagged); }
+vWord.onclick = () => setView(false); vTag.onclick = () => setView(true);
+setView(false);
+if (!matchMedia('(prefers-reduced-motion: reduce)').matches) setTimeout(() => setView(true), 900); else setView(true);
+
+/* ---------- Options ---------- */
+const state = { files: [], opts: null };
+function readOpts() {
+  const formats = {};
+  document.querySelectorAll('.fmt').forEach((b) => formats[b.dataset.k] = b.getAttribute('aria-pressed') === 'true');
+  return {
+    formats, tagStyle: document.querySelector('input[name=tagStyle]:checked').value,
+    strip: $('#oStrip').checked, styles: $('#oStyles').checked, notes: $('#oNotes').checked,
+    spacesInside: !$('#oTrim').checked, escape: $('#oEsc').checked,
+  };
+}
+function paintTagNames() {
+  const t = Taglift.TAGSETS[document.querySelector('input[name=tagStyle]:checked').value];
+  document.querySelectorAll('.fmt').forEach((b) => b.querySelector('code').textContent = `<${t[b.dataset.k]}>`);
+}
+try { const saved = JSON.parse(localStorage.getItem('taglift-opts') || 'null'); if (saved) applySaved(saved); } catch (e) {}
+function applySaved(o) {
+  document.querySelectorAll('.fmt').forEach((b) => { if (o.formats && b.dataset.k in o.formats) b.setAttribute('aria-pressed', !!o.formats[b.dataset.k]); });
+  const r = document.querySelector(`input[name=tagStyle][value="${o.tagStyle}"]`); if (r) r.checked = true;
+  $('#oStrip').checked = o.strip !== false; $('#oStyles').checked = o.styles !== false; $('#oNotes').checked = o.notes !== false;
+  $('#oTrim').checked = !o.spacesInside; $('#oEsc').checked = !!o.escape;
+}
+paintTagNames();
+let rerunTimer;
+function optsChanged() {
+  paintTagNames();
+  state.opts = readOpts();
+  try { localStorage.setItem('taglift-opts', JSON.stringify(state.opts)); } catch (e) {}
+  const none = !KEYS.some((k) => state.opts.formats[k]);
+  $('#status').textContent = none ? 'Choose at least one kind of formatting to convert.' : '';
+  if (!state.files.length) return;
+  clearTimeout(rerunTimer);
+  rerunTimer = setTimeout(async () => {
+    $('#status').textContent = 'Updating…';
+    for (const f of state.files) await run(f);
+    $('#status').textContent = none ? 'Choose at least one kind of formatting to convert.' : 'Updated with the new settings.';
+  }, 180);
+}
+document.querySelectorAll('.fmt').forEach((b) => b.onclick = () => { b.setAttribute('aria-pressed', b.getAttribute('aria-pressed') !== 'true'); optsChanged(); });
+document.querySelectorAll('.opts input').forEach((i) => i.addEventListener('change', optsChanged));
+state.opts = readOpts();
+
+/* ---------- Intake ---------- */
+const drop = $('#drop'), input = $('#fileInput');
+['dragenter', 'dragover'].forEach((e) => drop.addEventListener(e, (ev) => { ev.preventDefault(); drop.classList.add('over'); }));
+['dragleave', 'drop'].forEach((e) => drop.addEventListener(e, (ev) => { ev.preventDefault(); drop.classList.remove('over'); }));
+drop.addEventListener('drop', (ev) => addFiles(ev.dataTransfer.files));
+// allow dropping anywhere on the page
+window.addEventListener('dragover', (e) => e.preventDefault());
+window.addEventListener('drop', (e) => { e.preventDefault(); if (!drop.contains(e.target)) addFiles(e.dataTransfer.files); });
+input.addEventListener('change', () => { addFiles(input.files); input.value = ''; });
+$('#trySample').onclick = () => {
+  const bin = atob(SAMPLE_B64), u8 = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+  addFiles([new File([u8], 'Sample credit agreement excerpt.docx')]);
+};
+
+let uid = 0;
+async function addFiles(list) {
+  const arr = Array.from(list || []);
+  if (!arr.length) return;
+  drop.classList.add('compact');
+  $('#dropTitle').textContent = 'Add more documents';
+  $('#sampleLine').hidden = true;
+  for (const file of arr) {
+    const f = { id: ++uid, file, name: file.name, el: null, result: null, error: null, open: false, shown: 40 };
+    state.files.unshift(f);
+    f.el = document.createElement('article');
+    f.el.className = 'file';
+    $('#results').prepend(f.el);
+    if (!/\.docx$/i.test(file.name)) {
+      f.error = /\.doc$/i.test(file.name) ? 'This is an older .doc file. Open it in Word and save it as .docx, then add it again.' : 'Only Word .docx files can be converted.';
+      render(f); continue;
+    }
+    try { f.buf = await file.arrayBuffer(); } catch (e) { f.error = 'The file couldn’t be read.'; render(f); continue; }
+    await run(f);
+  }
+}
+async function run(f) {
+  if (!f.buf) return;
+  f.busy = true; render(f);
+  try {
+    const opts = Object.assign({}, state.opts, { previewLimit: 400 });
+    f.result = await Taglift.convert(f.buf.slice(0), opts);
+    f.error = null;
+  } catch (e) {
+    console.error(e);
+    f.result = null;
+    f.error = e instanceof Taglift.UserError ? e.message : 'Something in this document couldn’t be converted. Try re-saving it in Word and adding it again.';
+  }
+  f.busy = false; render(f);
+}
+
+/* ---------- Render ---------- */
+const esc = (s) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+const TAG_RE = /<\/?(?:b|i|u|s|sub|sup|strong|em|del|strike)>/g;
+function tagged(s) {
+  let out = '', last = 0, m;
+  TAG_RE.lastIndex = 0;
+  while ((m = TAG_RE.exec(s))) { out += esc(s.slice(last, m.index)) + `<span class="t">${esc(m[0])}</span>`; last = m.index + m[0].length; }
+  return out + esc(s.slice(last));
+}
+function before(segs) {
+  return segs.map((sg) => sg.fmt.length ? `<span class="${sg.fmt.map((k) => 'f-' + k).join(' ')}">${esc(sg.text)}</span>` : esc(sg.text)).join('');
+}
+const outName = (n) => n.replace(/\.docx$/i, '') + ' (tagged).docx';
+const ICON_X = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>';
+const ICON_DL = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 19h14"/></svg>';
+const ICON_CHEV = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>';
+
+function render(f) {
+  const r = f.result, el = f.el;
+  let html = '<div class="file-top">';
+  if (f.busy) html += `<div class="file-ic"><div class="spinner" aria-hidden="true"></div></div>`;
+  else if (f.error) html += `<div class="file-ic bad">!</div>`;
+  else html += `<div class="file-ic done">DOCX</div>`;
+  html += `<div class="file-meta"><div class="file-name" title="${esc(f.name)}">${esc(f.name)}</div>`;
+  if (f.busy) html += `<div class="file-sub">Converting…</div>`;
+  else if (f.error) html += `<div class="file-sub err">${esc(f.error)}</div>`;
+  else {
+    const total = KEYS.reduce((a, k) => a + r.stats.tags[k], 0);
+    html += `<div class="file-sub">${total ? `${total.toLocaleString()} formatted passage${total === 1 ? '' : 's'} tagged in ${r.stats.changedParagraphs.toLocaleString()} of ${r.stats.paragraphs.toLocaleString()} paragraphs` : 'No matching formatting found. The download is unchanged.'}</div>`;
+  }
+  html += '</div>';
+  if (r && !f.busy && !f.error) html += `<button class="btn btn-primary" data-act="dl">${ICON_DL}Download .docx</button>`;
+  html += `<button class="icon-btn" data-act="rm" aria-label="Remove ${esc(f.name)}">${ICON_X}</button></div>`;
+
+  if (r && !f.busy && !f.error) {
+    const t = Taglift.TAGSETS[state.opts.tagStyle];
+    html += '<div class="tally">' + KEYS.filter((k) => state.opts.formats[k]).map((k) =>
+      `<span class="chip${r.stats.tags[k] ? '' : ' zero'}"><code>&lt;${t[k]}&gt;</code><b>${r.stats.tags[k].toLocaleString()}</b> ${FMT_NAMES[k]}</span>`).join('') + '</div>';
+    if (r.previews.length) {
+      html += `<button class="review-toggle" data-act="rv" aria-expanded="${f.open}">Review the changes ${ICON_CHEV}</button>`;
+      html += `<div class="review${f.open ? ' open' : ''}"><div class="rv-head"><span>In Word</span><span>Converted</span></div>`;
+      for (const p of r.previews.slice(0, f.shown)) {
+        const part = p.part !== 'Body' ? `<span class="rv-part">${p.part}</span>` : '';
+        html += `<div class="rv-row"><div>${part}${before(p.before)}</div><div>${tagged(p.after)}</div></div>`;
+      }
+      if (r.previews.length > f.shown) html += `<div class="rv-more"><button class="btn btn-quiet" data-act="more">Show ${Math.min(40, r.previews.length - f.shown)} more paragraphs</button></div>`;
+      else if (r.stats.changedParagraphs > r.previews.length) html += `<div class="rv-empty">Showing the first ${r.previews.length} changed paragraphs. The download includes all ${r.stats.changedParagraphs.toLocaleString()}.</div>`;
+      html += '</div>';
+    }
+  }
+  el.innerHTML = html;
+  el.querySelectorAll('[data-act]').forEach((b) => b.onclick = () => act(f, b.dataset.act, b));
+}
+
+async function act(f, a, btn) {
+  if (a === 'rm') {
+    state.files = state.files.filter((x) => x !== f); f.el.remove();
+    if (!state.files.length) { drop.classList.remove('compact'); $('#dropTitle').textContent = 'Drop Word documents here'; $('#sampleLine').hidden = false; }
+    return;
+  }
+  if (a === 'rv') { f.open = !f.open; render(f); return; }
+  if (a === 'more') { f.shown += 40; render(f); return; }
+  if (a === 'dl') await download(f.result.blob, outName(f.name), btn);
+}
+
+/* ---------- Download ---------- */
+let dlNs;
+const dlReady = (async () => {
+  try { if (window.claude && typeof window.claude.use === 'function') dlNs = await window.claude.use('downloads'); } catch (e) { dlNs = null; }
+})();
+async function download(blob, filename, btn) {
+  btn.disabled = true;
+  try {
+    if (window.claude && typeof window.claude.use === 'function') await dlReady;
+    if (dlNs) {
+      try { await dlNs.save({ filename, data: blob }); toast('Downloaded ' + filename); }
+      catch (e) {
+        if (e && e.code === 'declined') return;
+        if (e && e.code === 'rate_limited') { toast('A download prompt is already open.'); return; }
+        fallback(blob, filename);
+      }
+    } else fallback(blob, filename);
+  } finally { btn.disabled = false; }
+}
+function fallback(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 4000);
+  toast('Downloaded ' + filename);
+}
+let toastT;
+function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), 2600); }
+})();
+</script>
+</body>
+</html>
